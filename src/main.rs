@@ -6,6 +6,7 @@ mod camera;
 mod level;
 mod collectibles;
 mod enemies;
+mod powerups;
 mod ui;
 
 use player::PlayerPlugin;
@@ -13,6 +14,7 @@ use camera::CameraPlugin;
 use level::LevelPlugin;
 use collectibles::CollectiblesPlugin;
 use enemies::EnemiesPlugin;
+use powerups::PowerUpsPlugin;
 use ui::UIPlugin;
 
 fn main() {
@@ -33,6 +35,7 @@ fn main() {
         .add_plugins(LevelPlugin)
         .add_plugins(CollectiblesPlugin)
         .add_plugins(EnemiesPlugin)
+        .add_plugins(PowerUpsPlugin)
         .add_plugins(UIPlugin)
         .insert_resource(ClearColor(Color::srgb(0.53, 0.81, 0.92))) // Sky blue
         .insert_resource(GameState::default())
