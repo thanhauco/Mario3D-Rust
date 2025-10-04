@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use crate::player::Player;
 use crate::GameState;
+use rand::Rng;
 
 pub struct EnemiesPlugin;
 
@@ -12,6 +13,7 @@ impl Plugin for EnemiesPlugin {
                 enemy_movement,
                 enemy_collision_with_player,
                 enemy_patrol,
+                enemy_death_animation,
             ));
     }
 }
@@ -21,6 +23,13 @@ pub struct Enemy {
     pub speed: f32,
     pub patrol_direction: Vec3,
     pub damage: u32,
+    pub is_dying: bool,
+}
+
+#[derive(Component)]
+struct DeathAnimation {
+    timer: Timer,
+    initial_pos: Vec3,
 }
 
 impl Default for Enemy {
@@ -29,6 +38,7 @@ impl Default for Enemy {
             speed: 2.0,
             patrol_direction: Vec3::new(1.0, 0.0, 0.0),
             damage: 1,
+            is_dying: false,
         }
     }
 }
@@ -141,28 +151,126 @@ fn enemy_movement(
 fn enemy_collision_with_player(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
-    player_query: Query<(Entity, &Transform), With<Player>>,
-    enemy_query: Query<(&Transform, &Enemy)>,
-    time: Res<Time>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    player_query: Query<(Entity, &Transform, &Velocity), With<Player>>,
+    mut enemy_query: Query<(Entity, &Transform, &mut Enemy), Without<DeathAnimation>>,
 ) {
-    if let Ok((player_entity, player_transform)) = player_query.get_single() {
-        for (enemy_transform, enemy) in enemy_query.iter() {
+    if let Ok((player_entity, player_transform, player_velocity)) = player_query.get_single() {
+        for (enemy_entity, enemy_transform, mut enemy) in enemy_query.iter_mut() {
+            if enemy.is_dying {
+                continue;
+            }
+            
             let distance = player_transform.translation.distance(enemy_transform.translation);
             
             if distance < 1.0 {
-                // Check if player is jumping on enemy (from above)
-                if player_transform.translation.y > enemy_transform.translation.y + 0.5 {
-                    // Player defeats enemy by jumping on it
+                let height_diff = player_transform.translation.y - enemy_transform.translation.y;
+                
+                // Check if player is jumping on enemy (from above and moving downward)
+                if height_diff > 0.3 && player_velocity.linvel.y < 0.0 {
+                    // Player defeats enemy by stomping
                     game_state.score += 200;
-                    // In a full implementation, we'd despawn the enemy here
-                } else {
-                    // Enemy hits player
+                    enemy.is_dying = true;
+                    
+                    // Add death animation component
+                    commands.entity(enemy_entity).insert(DeathAnimation {
+                        timer: Timer::from_seconds(0.5, TimerMode::Once),
+                        initial_pos: enemy_transform.translation,
+                    });
+                    
+                    // Spawn defeat particles
+                    spawn_enemy_defeat_particles(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        enemy_transform.translation,
+                    );
+                } else if height_diff <= 0.3 {
+                    // Enemy hits player from side
                     if game_state.lives > 0 {
                         game_state.lives -= enemy.damage;
-                        // In a full implementation, add invincibility frames and knockback
                     }
                 }
             }
+        }
+    }
+}
+
+fn spawn_enemy_defeat_particles(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    position: Vec3,
+) {
+    let mut rng = rand::thread_rng();
+    
+    let particle_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.8, 0.2, 0.1),
+        emissive: Color::srgb(1.0, 0.3, 0.1).into(),
+        ..default()
+    });
+
+    for _ in 0..6 {
+        let velocity = Vec3::new(
+            rng.gen_range(-3.0..3.0),
+            rng.gen_range(3.0..6.0),
+            rng.gen_range(-3.0..3.0),
+        );
+
+        commands.spawn((
+            PbrBundle {
+                mesh: meshes.add(Sphere::new(0.15)),
+                material: particle_material.clone(),
+                transform: Transform::from_translation(position),
+                ..default()
+            },
+            EnemyParticle {
+                lifetime: Timer::from_seconds(1.0, TimerMode::Once),
+                velocity,
+            },
+        ));
+    }
+}
+
+#[derive(Component)]
+struct EnemyParticle {
+    lifetime: Timer,
+    velocity: Vec3,
+}
+
+fn enemy_death_animation(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut enemy_query: Query<(Entity, &mut Transform, &mut DeathAnimation)>,
+    mut particle_query: Query<(Entity, &mut Transform, &mut EnemyParticle), Without<DeathAnimation>>,
+) {
+    // Handle enemy death animation
+    for (entity, mut transform, mut death_anim) in enemy_query.iter_mut() {
+        death_anim.timer.tick(time.delta());
+        
+        if death_anim.timer.finished() {
+            commands.entity(entity).despawn_recursive();
+        } else {
+            // Squash and fade animation
+            let progress = death_anim.timer.fraction();
+            transform.scale = Vec3::new(1.0 + progress, 1.0 - progress * 0.8, 1.0 + progress);
+            transform.translation.y = death_anim.initial_pos.y - progress * 0.5;
+        }
+    }
+    
+    // Handle defeat particles
+    for (entity, mut transform, mut particle) in particle_query.iter_mut() {
+        particle.lifetime.tick(time.delta());
+        
+        if particle.lifetime.finished() {
+            commands.entity(entity).despawn_recursive();
+        } else {
+            transform.translation += particle.velocity * time.delta_seconds();
+            particle.velocity.y -= 9.8 * time.delta_seconds();
+            
+            let alpha = 1.0 - particle.lifetime.fraction();
+            transform.scale = Vec3::splat(alpha);
         }
     }
 }

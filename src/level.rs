@@ -1,12 +1,15 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use rand::Rng;
+use crate::player::Player;
+use crate::GameState;
 
 pub struct LevelPlugin;
 
 impl Plugin for LevelPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (spawn_ground, spawn_platforms, spawn_obstacles));
+        app.add_systems(Startup, (spawn_ground, spawn_platforms, spawn_obstacles))
+            .add_systems(Update, (question_block_interaction, block_animation));
     }
 }
 
@@ -116,7 +119,7 @@ fn spawn_obstacles(
             },
             Collider::cuboid(0.5, 0.5, 0.5),
             RigidBody::Fixed,
-            QuestionBlock { hit: false },
+            QuestionBlock::default(),
             Name::new("QuestionBlock"),
         ));
     }
@@ -153,4 +156,133 @@ fn spawn_obstacles(
 #[derive(Component)]
 pub struct QuestionBlock {
     pub hit: bool,
+    pub coins_remaining: u32,
+    pub bounce_timer: f32,
+}
+
+impl Default for QuestionBlock {
+    fn default() -> Self {
+        Self {
+            hit: false,
+            coins_remaining: 3,
+            bounce_timer: 0.0,
+        }
+    }
+}
+
+fn question_block_interaction(
+    mut commands: Commands,
+    mut game_state: ResMut<GameState>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    player_query: Query<&Transform, With<Player>>,
+    mut block_query: Query<(Entity, &Transform, &mut QuestionBlock, &Handle<StandardMaterial>)>,
+    time: Res<Time>,
+) {
+    if let Ok(player_transform) = player_query.get_single() {
+        for (block_entity, block_transform, mut block, material_handle) in block_query.iter_mut() {
+            let distance = player_transform.translation.distance(block_transform.translation);
+            let height_diff = block_transform.translation.y - player_transform.translation.y;
+            
+            // Check if player hits block from below
+            if distance < 1.2 && height_diff > 0.0 && height_diff < 1.5 && !block.hit {
+                if block.coins_remaining > 0 {
+                    // Spawn coin from block
+                    spawn_block_coin(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        block_transform.translation + Vec3::new(0.0, 1.0, 0.0),
+                    );
+                    
+                    block.coins_remaining -= 1;
+                    game_state.coins += 1;
+                    game_state.score += 100;
+                    block.bounce_timer = 0.2;
+                    
+                    if block.coins_remaining == 0 {
+                        block.hit = true;
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn spawn_block_coin(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    position: Vec3,
+) {
+    let coin_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(1.0, 0.84, 0.0),
+        metallic: 0.9,
+        perceptual_roughness: 0.2,
+        emissive: Color::srgb(0.8, 0.7, 0.0).into(),
+        ..default()
+    });
+
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Cylinder::new(0.3, 0.1)),
+            material: coin_material,
+            transform: Transform::from_translation(position),
+            ..default()
+        },
+        BlockCoin {
+            lifetime: Timer::from_seconds(1.0, TimerMode::Once),
+            initial_y: position.y,
+            velocity: Vec3::new(0.0, 5.0, 0.0),
+        },
+    ));
+}
+
+#[derive(Component)]
+struct BlockCoin {
+    lifetime: Timer,
+    initial_y: f32,
+    velocity: Vec3,
+}
+
+fn block_animation(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut block_query: Query<(&mut Transform, &mut QuestionBlock)>,
+    mut coin_query: Query<(Entity, &mut Transform, &mut BlockCoin), Without<QuestionBlock>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // Animate question blocks
+    for (mut transform, mut block) in block_query.iter_mut() {
+        if block.bounce_timer > 0.0 {
+            block.bounce_timer -= time.delta_seconds();
+            let bounce = (block.bounce_timer / 0.2 * std::f32::consts::PI).sin() * 0.2;
+            transform.translation.y += bounce * time.delta_seconds() * 5.0;
+        }
+        
+        // Change color when empty
+        if block.hit {
+            // Block becomes gray when empty
+        }
+    }
+    
+    // Animate coins popping out of blocks
+    for (entity, mut transform, mut coin) in coin_query.iter_mut() {
+        coin.lifetime.tick(time.delta());
+        
+        if coin.lifetime.finished() {
+            commands.entity(entity).despawn_recursive();
+        } else {
+            // Arc motion
+            transform.translation += coin.velocity * time.delta_seconds();
+            coin.velocity.y -= 15.0 * time.delta_seconds();
+            
+            // Rotate coin
+            transform.rotate_y(time.delta_seconds() * 5.0);
+            
+            // Fade out
+            let alpha = 1.0 - coin.lifetime.fraction();
+            transform.scale = Vec3::splat(alpha.max(0.3));
+        }
+    }
 }
