@@ -5,12 +5,14 @@ mod player;
 mod camera;
 mod level;
 mod collectibles;
+mod enemies;
 mod ui;
 
 use player::PlayerPlugin;
 use camera::CameraPlugin;
 use level::LevelPlugin;
 use collectibles::CollectiblesPlugin;
+use enemies::EnemiesPlugin;
 use ui::UIPlugin;
 
 fn main() {
@@ -30,21 +32,22 @@ fn main() {
         .add_plugins(CameraPlugin)
         .add_plugins(LevelPlugin)
         .add_plugins(CollectiblesPlugin)
+        .add_plugins(EnemiesPlugin)
         .add_plugins(UIPlugin)
         .insert_resource(ClearColor(Color::srgb(0.53, 0.81, 0.92))) // Sky blue
         .insert_resource(GameState::default())
         .run();
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct GameState {
     pub score: u32,
     pub coins: u32,
     pub lives: u32,
 }
 
-impl GameState {
-    pub fn new() -> Self {
+impl Default for GameState {
+    fn default() -> Self {
         Self {
             score: 0,
             coins: 0,
