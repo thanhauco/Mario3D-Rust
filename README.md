@@ -11,14 +11,37 @@ A modern 3D Mario-style platformer game built with Rust and cutting-edge game de
 
 ## ✨ Features
 
-- 🎮 Smooth 3D platforming mechanics
+### Core Gameplay
+- 🎮 Smooth 3D platforming mechanics with realistic physics
 - 🏃 Character movement with WASD/Arrow keys
 - 🦘 Jump mechanics with Space bar
-- 🪙 Collectible coins with score system
-- 📦 Question blocks and obstacles
-- 🎥 Dynamic camera follow system
-- 🌟 Modern graphics with HDR and PBR materials
-- ⚡ Physics-based gameplay using Rapier3D
+- 🪙 Collectible coins with particle burst effects
+- 💯 Real-time score and coin tracking
+
+### Enemies & Combat
+- 👾 Patrolling enemies with AI behavior
+- 🦘 Jump stomp mechanic - defeat enemies by jumping on them
+- 💥 Enemy death animations with particle effects
+- ❤️ Lives system with damage from enemy collisions
+
+### Interactive Objects
+- ❓ Question blocks that spawn coins when hit from below (3 coins per block)
+- 🎆 Block bounce animations
+- 🍄 Power-ups: Mushrooms and Fire Flowers
+- 🌟 Glowing emissive materials for collectibles
+
+### Visual Effects
+- 🎨 Modern graphics with HDR and PBR materials
+- ✨ Particle effects for coin collection and enemy defeats
+- 🎥 Smooth camera follow system with lerp
+- 💡 Dynamic lighting with directional and ambient lights
+- 🌈 Emissive materials for glowing objects
+
+### Level Design
+- 🏗️ Multiple platforms at varying heights
+- 🟢 Green pipes as obstacles
+- 🌱 Grass-textured ground plane
+- 📦 Strategic placement of collectibles and enemies
 
 ## 🎯 Controls
 
@@ -51,9 +74,11 @@ cargo build --release
 ## 🎨 Game Elements
 
 - **Player** - Red capsule character with blue cap (Mario)
+- **Enemies** - Red patrolling enemies with glowing eyes
 - **Platforms** - Golden/brick colored platforms to jump on
-- **Coins** - Rotating golden coins to collect
-- **Question Blocks** - Yellow glowing blocks
+- **Coins** - Rotating golden coins with emissive glow (30+ scattered in level)
+- **Question Blocks** - Yellow glowing blocks that spawn coins (10 blocks, 3 coins each)
+- **Power-ups** - Mushrooms (red with white spots) and Fire Flowers (orange)
 - **Pipes** - Green cylindrical obstacles
 - **Ground** - Grass-colored terrain
 
@@ -61,22 +86,27 @@ cargo build --release
 
 The project is structured into modular plugins:
 
+- `main.rs` - Game initialization and state management
 - `player.rs` - Player movement, jumping, and physics
-- `camera.rs` - Smooth camera follow system
-- `level.rs` - Level generation, platforms, and obstacles
-- `collectibles.rs` - Coins and collectible items
+- `camera.rs` - Smooth camera follow system with lerp
+- `level.rs` - Level generation, platforms, obstacles, and question block interactions
+- `collectibles.rs` - Coins with particle effects on collection
+- `enemies.rs` - Enemy AI, patrol behavior, and jump stomp mechanics
+- `powerups.rs` - Power-up spawning and collection system
 - `ui.rs` - HUD displaying score, coins, and lives
 
 ## 📝 Future Enhancements
 
 - [ ] 3D character models (GLTF/GLB support)
-- [ ] Enemies and AI
-- [ ] Multiple levels
-- [ ] Power-ups (mushrooms, fire flowers)
 - [ ] Sound effects and music
-- [ ] Particle effects
-- [ ] More complex level designs
-- [ ] Save/load system
+- [ ] Multiple levels with progression
+- [ ] Fire flower shooting mechanic
+- [ ] Star power-up invincibility mode
+- [ ] More enemy types (flying, jumping)
+- [ ] Boss battles
+- [ ] Checkpoints and save system
+- [ ] Multiplayer support
+- [ ] Level editor
 
 ## 🤝 Contributing
 
