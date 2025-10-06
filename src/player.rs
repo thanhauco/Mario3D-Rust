@@ -17,16 +17,20 @@ impl Plugin for PlayerPlugin {
 #[derive(Component)]
 pub struct Player {
     pub speed: f32,
+    pub sprint_speed: f32,
     pub jump_force: f32,
     pub is_grounded: bool,
+    pub is_sprinting: bool,
 }
 
 impl Default for Player {
     fn default() -> Self {
         Self {
             speed: 8.0,
+            sprint_speed: 14.0,
             jump_force: 12.0,
             is_grounded: false,
+            is_sprinting: false,
         }
     }
 }
@@ -84,9 +88,9 @@ fn spawn_player(
 fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
-    mut query: Query<(&mut Velocity, &Player, &Transform)>,
+    mut query: Query<(&mut Velocity, &mut Player, &Transform)>,
 ) {
-    for (mut velocity, player, transform) in query.iter_mut() {
+    for (mut velocity, mut player, transform) in query.iter_mut() {
         let mut direction = Vec3::ZERO;
 
         if keyboard.pressed(KeyCode::KeyW) || keyboard.pressed(KeyCode::ArrowUp) {
@@ -102,10 +106,18 @@ fn player_movement(
             direction.x += 1.0;
         }
 
+        // Check for sprint (Shift key)
+        player.is_sprinting = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
+        let current_speed = if player.is_sprinting {
+            player.sprint_speed
+        } else {
+            player.speed
+        };
+
         if direction.length() > 0.0 {
             direction = direction.normalize();
-            velocity.linvel.x = direction.x * player.speed;
-            velocity.linvel.z = direction.z * player.speed;
+            velocity.linvel.x = direction.x * current_speed;
+            velocity.linvel.z = direction.z * current_speed;
         } else {
             // Apply friction when not moving
             velocity.linvel.x *= 0.8;

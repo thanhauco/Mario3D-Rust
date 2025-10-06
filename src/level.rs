@@ -8,7 +8,7 @@ pub struct LevelPlugin;
 
 impl Plugin for LevelPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (spawn_ground, spawn_platforms, spawn_obstacles))
+        app.add_systems(Startup, (spawn_ground, spawn_platforms, spawn_obstacles, spawn_level_boundaries))
             .add_systems(Update, (question_block_interaction, block_animation));
     }
 }
@@ -285,4 +285,45 @@ fn block_animation(
             transform.scale = Vec3::splat(alpha.max(0.3));
         }
     }
+}
+
+fn spawn_level_boundaries(
+    mut commands: Commands,
+) {
+    // Define play area boundaries
+    let boundary_size = 50.0;
+    let wall_height = 20.0;
+    let wall_thickness = 1.0;
+
+    // North wall (negative Z)
+    commands.spawn((
+        TransformBundle::from_transform(Transform::from_xyz(0.0, wall_height / 2.0, -boundary_size)),
+        Collider::cuboid(boundary_size, wall_height / 2.0, wall_thickness / 2.0),
+        RigidBody::Fixed,
+        Name::new("BoundaryNorth"),
+    ));
+
+    // South wall (positive Z)
+    commands.spawn((
+        TransformBundle::from_transform(Transform::from_xyz(0.0, wall_height / 2.0, boundary_size)),
+        Collider::cuboid(boundary_size, wall_height / 2.0, wall_thickness / 2.0),
+        RigidBody::Fixed,
+        Name::new("BoundarySouth"),
+    ));
+
+    // East wall (positive X)
+    commands.spawn((
+        TransformBundle::from_transform(Transform::from_xyz(boundary_size, wall_height / 2.0, 0.0)),
+        Collider::cuboid(wall_thickness / 2.0, wall_height / 2.0, boundary_size),
+        RigidBody::Fixed,
+        Name::new("BoundaryEast"),
+    ));
+
+    // West wall (negative X)
+    commands.spawn((
+        TransformBundle::from_transform(Transform::from_xyz(-boundary_size, wall_height / 2.0, 0.0)),
+        Collider::cuboid(wall_thickness / 2.0, wall_height / 2.0, boundary_size),
+        RigidBody::Fixed,
+        Name::new("BoundaryWest"),
+    ));
 }
