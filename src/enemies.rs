@@ -14,6 +14,7 @@ impl Plugin for EnemiesPlugin {
                 enemy_collision_with_player,
                 enemy_patrol,
                 enemy_death_animation,
+                update_combo_timer,
             ));
     }
 }
@@ -170,7 +171,13 @@ fn enemy_collision_with_player(
                 // Check if player is jumping on enemy (from above and moving downward)
                 if height_diff > 0.3 && player_velocity.linvel.y < 0.0 {
                     // Player defeats enemy by stomping
-                    game_state.score += 200;
+                    // Combo system: increase combo and apply multiplier
+                    game_state.combo += 1;
+                    game_state.combo_timer = 3.0; // 3 seconds to get next combo
+                    let combo_multiplier = game_state.combo.min(10); // Max 10x
+                    let score_gain = 200 * combo_multiplier;
+                    game_state.score += score_gain;
+                    
                     enemy.is_dying = true;
                     
                     // Add death animation component
@@ -190,6 +197,9 @@ fn enemy_collision_with_player(
                     // Enemy hits player from side
                     if game_state.lives > 0 {
                         game_state.lives -= enemy.damage;
+                        // Reset combo on taking damage
+                        game_state.combo = 0;
+                        game_state.combo_timer = 0.0;
                     }
                 }
             }
@@ -271,6 +281,21 @@ fn enemy_death_animation(
             
             let alpha = 1.0 - particle.lifetime.fraction();
             transform.scale = Vec3::splat(alpha);
+        }
+    }
+}
+
+fn update_combo_timer(
+    time: Res<Time>,
+    mut game_state: ResMut<GameState>,
+) {
+    if game_state.combo_timer > 0.0 {
+        game_state.combo_timer -= time.delta_seconds();
+        
+        if game_state.combo_timer <= 0.0 {
+            // Combo expired
+            game_state.combo = 0;
+            game_state.combo_timer = 0.0;
         }
     }
 }

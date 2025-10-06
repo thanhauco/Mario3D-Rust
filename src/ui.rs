@@ -19,6 +19,9 @@ struct CoinsText;
 #[derive(Component)]
 struct LivesText;
 
+#[derive(Component)]
+struct ComboText;
+
 fn setup_ui(mut commands: Commands) {
     // UI Root
     commands
@@ -69,8 +72,25 @@ fn setup_ui(mut commands: Commands) {
                                 color: Color::srgb(1.0, 0.84, 0.0),
                                 ..default()
                             },
-                        ),
+                        )
+                        .with_style(Style {
+                            margin: UiRect::bottom(Val::Px(10.0)),
+                            ..default()
+                        }),
                         CoinsText,
+                    ));
+
+                    // Combo
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "",
+                            TextStyle {
+                                font_size: 28.0,
+                                color: Color::srgb(1.0, 0.5, 0.0),
+                                ..default()
+                            },
+                        ),
+                        ComboText,
                     ));
                 });
 
@@ -91,7 +111,7 @@ fn setup_ui(mut commands: Commands) {
     // Controls hint at bottom
     commands.spawn(
         TextBundle::from_section(
-            "Controls: WASD/Arrows to move | Space to jump",
+            "Controls: WASD/Arrows - Move | Space - Jump | Shift - Sprint | ESC - Pause",
             TextStyle {
                 font_size: 20.0,
                 color: Color::srgba(1.0, 1.0, 1.0, 0.7),
@@ -109,9 +129,10 @@ fn setup_ui(mut commands: Commands) {
 
 fn update_ui(
     game_state: Res<GameState>,
-    mut score_query: Query<&mut Text, (With<ScoreText>, Without<CoinsText>, Without<LivesText>)>,
-    mut coins_query: Query<&mut Text, (With<CoinsText>, Without<ScoreText>, Without<LivesText>)>,
-    mut lives_query: Query<&mut Text, (With<LivesText>, Without<ScoreText>, Without<CoinsText>)>,
+    mut score_query: Query<&mut Text, (With<ScoreText>, Without<CoinsText>, Without<LivesText>, Without<ComboText>)>,
+    mut coins_query: Query<&mut Text, (With<CoinsText>, Without<ScoreText>, Without<LivesText>, Without<ComboText>)>,
+    mut lives_query: Query<&mut Text, (With<LivesText>, Without<ScoreText>, Without<CoinsText>, Without<ComboText>)>,
+    mut combo_query: Query<&mut Text, (With<ComboText>, Without<ScoreText>, Without<CoinsText>, Without<LivesText>)>,
 ) {
     if game_state.is_changed() {
         if let Ok(mut text) = score_query.get_single_mut() {
@@ -124,6 +145,14 @@ fn update_ui(
 
         if let Ok(mut text) = lives_query.get_single_mut() {
             text.sections[0].value = format!("Lives: {}", game_state.lives);
+        }
+
+        if let Ok(mut text) = combo_query.get_single_mut() {
+            if game_state.combo > 1 {
+                text.sections[0].value = format!("COMBO x{}!", game_state.combo);
+            } else {
+                text.sections[0].value = String::new();
+            }
         }
     }
 }

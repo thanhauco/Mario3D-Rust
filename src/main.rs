@@ -8,6 +8,7 @@ mod collectibles;
 mod enemies;
 mod powerups;
 mod game_state;
+mod pause;
 mod ui;
 
 use player::PlayerPlugin;
@@ -17,6 +18,7 @@ use collectibles::CollectiblesPlugin;
 use enemies::EnemiesPlugin;
 use powerups::PowerUpsPlugin;
 use game_state::GameStatePlugin;
+use pause::PausePlugin;
 use ui::UIPlugin;
 
 fn main() {
@@ -39,6 +41,7 @@ fn main() {
         .add_plugins(EnemiesPlugin)
         .add_plugins(PowerUpsPlugin)
         .add_plugins(GameStatePlugin)
+        .add_plugins(PausePlugin)
         .add_plugins(UIPlugin)
         .insert_resource(ClearColor(Color::srgb(0.53, 0.81, 0.92))) // Sky blue
         .insert_resource(GameState::default())
@@ -50,6 +53,8 @@ pub struct GameState {
     pub score: u32,
     pub coins: u32,
     pub lives: u32,
+    pub combo: u32,
+    pub combo_timer: f32,
 }
 
 impl Default for GameState {
@@ -58,6 +63,8 @@ impl Default for GameState {
             score: 0,
             coins: 0,
             lives: 3,
+            combo: 0,
+            combo_timer: 0.0,
         }
     }
 }
