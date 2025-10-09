@@ -19,8 +19,12 @@ pub struct Player {
     pub speed: f32,
     pub sprint_speed: f32,
     pub jump_force: f32,
+    pub wall_jump_force: f32,
     pub is_grounded: bool,
     pub is_sprinting: bool,
+    pub has_double_jump: bool,
+    pub wall_normal: Option<Vec3>,
+    pub wall_jump_cooldown: f32,
 }
 
 impl Default for Player {
@@ -29,8 +33,12 @@ impl Default for Player {
             speed: 8.0,
             sprint_speed: 14.0,
             jump_force: 12.0,
+            wall_jump_force: 10.0,
             is_grounded: false,
             is_sprinting: false,
+            has_double_jump: true,
+            wall_normal: None,
+            wall_jump_cooldown: 0.0,
         }
     }
 }
@@ -125,33 +133,87 @@ fn player_movement(
         }
     }
 }
+}
 
 fn player_jump(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut Velocity, &Player)>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Velocity, &mut Player, &Transform)>,
     rapier_context: Res<RapierContext>,
-    player_query: Query<Entity, With<Player>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    time: Res<Time>,
 ) {
-    for (mut velocity, player) in query.iter_mut() {
-        // Check if grounded using raycast
-        if let Ok(player_entity) = player_query.get_single() {
-            let ray_pos = Vec3::new(0.0, -0.7, 0.0);
-            let ray_dir = Vec3::new(0.0, -1.0, 0.0);
-            let max_toi = 0.2;
-            let solid = true;
-            let filter = QueryFilter::default().exclude_rigid_body(player_entity);
+    for (player_entity, mut velocity, mut player, transform) in query.iter_mut() {
+        let mut is_grounded = false;
+        let mut wall_normal = None;
+        
+        // Update wall jump cooldown
+        if player.wall_jump_cooldown > 0.0 {
+            player.wall_jump_cooldown -= time.delta_seconds();
+        }
 
-            if rapier_context.cast_ray(ray_pos, ray_dir, max_toi, solid, filter).is_some() {
-                // Player is grounded
-                if keyboard.just_pressed(KeyCode::Space) {
-                    velocity.linvel.y = player.jump_force;
+        // Check if player is on the ground or against a wall
+        let ray_origin = transform.translation;
+        
+        // Ground check (down)
+        if let Some((_entity, toi)) = rapier_context.cast_ray(
+            ray_origin,
+            Vec3::NEG_Y,
+            1.1,
+            true,
+            QueryFilter::exclude_rigid_body(player_entity)
+        ) {
+            if toi < 1.1 {
+                is_grounded = true;
+                player.has_double_jump = true; // Reset double jump when grounded
+            }
+        }
+
+        // Wall check (in movement direction)
+        if !is_grounded && player.wall_jump_cooldown <= 0.0 {
+            let move_dir = Vec3::new(
+                velocity.linvel.x.signum(),
+                0.0,
+                velocity.linvel.z.signum()
+            ).normalize_or_zero();
+            
+            if move_dir != Vec3::ZERO {
+                if let Some((_entity, hit)) = rapier_context.cast_ray(
+                    ray_origin,
+                    move_dir,
+                    1.1,
+                    true,
+                    QueryFilter::exclude_rigid_body(player_entity)
+                ) {
+                    wall_normal = Some(hit.normal);
                 }
             }
         }
-    }
-}
 
-fn player_animation(
+        player.wall_normal = wall_normal;
+        let was_grounded = player.is_grounded;
+        player.is_grounded = is_grounded;
+
+        // Handle jumping
+        if keyboard.just_pressed(KeyCode::Space) {
+            if is_grounded {
+                // Regular jump
+                velocity.linvel.y = player.jump_force;
+                spawn_jump_effect(&mut commands, &mut meshes, &mut materials, transform.translation);
+            } else if player.has_double_jump {
+                // Double jump
+                velocity.linvel.y = player.jump_force * 0.9; // Slightly weaker than first jump
+                player.has_double_jump = false;
+                spawn_double_jump_effect(&mut commands, &mut meshes, &mut materials, transform.translation);
+            } else if let Some(normal) = player.wall_normal.filter(|_| player.wall_jump_cooldown <= 0.0) {
+                // Wall jump
+                let wall_jump_dir = (Vec3::Y + normal * 1.5).normalize();
+                velocity.linvel = wall_jump_dir * player.wall_jump_force;
+                player.wall_jump_cooldown = 0.3; // Small cooldown to prevent wall jump spam
+                spawn_wall_jump_effect(&mut commands, &mut meshes, &mut materials, transform.translation, normal);
+            }
+        }
     time: Res<Time>,
     mut query: Query<&mut Transform, With<Player>>,
 ) {
