@@ -1,8 +1,8 @@
 # Mario 3D - Rust Edition 🍄
 
-A modern 3D Mario-style platformer game built with Rust and cutting-edge game development technologies.
+A modern 3D Mario-style platformer game built with Rust and the Bevy engine, featuring smooth platforming mechanics, collectibles, and enemies.
 
-## 🚀 Tech Stack (2025)
+## 🚀 Tech Stack
 
 - **Bevy 0.14** - Modern ECS game engine with HDR rendering
 - **Rapier3D** - High-performance 3D physics engine
@@ -14,13 +14,23 @@ A modern 3D Mario-style platformer game built with Rust and cutting-edge game de
 ### Core Gameplay
 - 🎮 Smooth 3D platforming mechanics with realistic physics
 - 🏃 Character movement with WASD/Arrow keys
-- 🦘 Jump mechanics with Space bar
+- 🦘 Advanced jump mechanics (single, double, and wall jumps)
+- 🚀 Sprinting for faster movement
 - 🪙 Collectible coins with particle burst effects
 - 💯 Real-time score and coin tracking
+- 🔥 Combo system for chaining enemy defeats
+
+### Movement & Physics
+- 🦘 **Double Jump**: Jump again in mid-air
+- 🧱 **Wall Jump**: Jump off walls for extra height
+- 🏃 **Sprinting**: Hold Shift to move faster
+- 🌪️ **Air Control**: Adjust movement while in the air
+- ⚖️ **Momentum**: Realistic physics-based movement
 
 ### Enemies & Combat
 - 👾 Patrolling enemies with AI behavior
 - 🦘 Jump stomp mechanic - defeat enemies by jumping on them
+- 🔥 **Combo System**: Chain enemy defeats for score multipliers (up to 10x!)
 - 💥 Enemy death animations with particle effects
 - ❤️ Lives system with damage from enemy collisions
 
@@ -32,22 +42,48 @@ A modern 3D Mario-style platformer game built with Rust and cutting-edge game de
 
 ### Visual Effects
 - 🎨 Modern graphics with HDR and PBR materials
-- ✨ Particle effects for coin collection and enemy defeats
+- ✨ Particle effects for jumps, enemy defeats, and collectibles
 - 🎥 Smooth camera follow system with lerp
 - 💡 Dynamic lighting with directional and ambient lights
 - 🌈 Emissive materials for glowing objects
+- 🎭 Visual feedback for double jumps and wall jumps
+
+### UI/UX
+- ⏸️ Pause menu (press ESC)
+- 📊 On-screen HUD showing score, coins, and lives
+- 🔄 Combo counter with timer
+- 🎮 Intuitive controls display
 
 ### Level Design
 - 🏗️ Multiple platforms at varying heights
 - 🟢 Green pipes as obstacles
 - 🌱 Grass-textured ground plane
+- 🧱 Invisible boundary walls to keep players in the play area
 - 📦 Strategic placement of collectibles and enemies
 
-## 🎯 Controls
+## 🎮 Controls
 
-- **WASD** or **Arrow Keys** - Move Mario
-- **Space** - Jump
-- **ESC** - Quit game
+| Action | Key(s) |
+|--------|--------|
+| **Move** | WASD or Arrow Keys |
+| **Jump** | Space (press again in mid-air for double jump) |
+| **Sprint** | Hold Left/Right Shift while moving |
+| **Wall Jump** | Press Space while sliding on a wall |
+| **Pause** | ESC |
+
+## 🚀 Getting Started
+
+1. Make sure you have Rust installed (latest stable version)
+2. Clone this repository
+3. Run `cargo run --release` for optimal performance
+4. Enjoy the game!
+
+## 🔍 Tips
+
+- Chain enemy defeats quickly to build up your combo multiplier!
+- Use wall jumps to reach higher platforms
+- Sprint to cover ground faster and make longer jumps
+- Look for hidden areas above and below the main platforms
 
 ## 🛠️ Building & Running
 
